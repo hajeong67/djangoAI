@@ -1,0 +1,2 @@
+# djangoAI
+AI LAB
