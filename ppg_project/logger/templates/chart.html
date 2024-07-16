@@ -1,0 +1,224 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+<style>
+    body {
+        display: flex;
+        flex-direction: column;
+        background-color: #f0f2f5;
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 0;
+    }
+    .dashboard {
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+        padding: 20px;
+    }
+    .row {
+        display: flex;
+        flex: 1;
+        padding: 10px;
+    }
+    .column {
+        flex: 1;
+        padding: 20px;
+        margin: 10px;
+        background-color: #fff;
+        border-radius: 10px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        box-sizing: border-box;
+    }
+    #chartContainer {
+        height: 350px;
+        width: 100%;
+    }
+    #dynamicChartContainer, #growthGaugeChart {
+        height: 200px;
+        width: 100%;
+    }
+    #inferenceResults {
+        margin-top: 20px;
+        font-size: 16px;
+        color: #333;
+    }
+</style>
+<script src="https://cdn.canvasjs.com/canvasjs.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+<script>
+window.onload = function () {
+     // ppg chart
+    fetch('/api/ppg/', {
+    method: 'GET',
+    headers: {
+        'Content-Type': 'application/json'
+    }
+})
+.then(response => response.json())
+.then(data => {
+    console.log("Fetched data:", data);
+    var ppgData = data.ppg_data;
+    var predictions = data.predictions;
+    var datasets = [];
+
+    if (ppgData.length === 0) {
+        console.error('No PPG data found');
+    }
+
+    ppgData.forEach((subArray, index) => {
+        var chartData = [];
+        subArray.forEach((value, idx) => {
+            chartData.push({ x: idx, y: value });
+        });
+
+        datasets.push({
+            type: "line",
+            name: "" + (index + 1),
+            showInLegend: true,
+            markerSize: 0,
+            dataPoints: chartData,
+            color: "#7367F0"
+        });
+    });
+
+    var chart = new CanvasJS.Chart("chartContainer", {
+        title: {
+            text: "Normalized PPG Data"
+        },
+        axisX: {
+            title: "Sample Index"
+        },
+        axisY: {
+            title: "Signal Value"
+        },
+        data: datasets
+    });
+    chart.render();
+
+    function toggleDataSeries(e) {
+        if (typeof(e.dataSeries.visible) === "undefined" || e.dataSeries.visible) {
+            e.dataSeries.visible = false;
+        } else {
+            e.dataSeries.visible = true;
+        }
+        chart.render();
+    }
+
+    // 예측 결과의 평균 계산
+    var averagePrediction = predictions.reduce((sum, pred) => sum + pred, 0) / predictions.length;
+        var inferenceResultText = averagePrediction >= 0.5 ? '긍정' : '부정';
+
+        var inferenceContainer = document.getElementById('inferenceResults');
+        var resultSummary = document.createElement('p');
+        resultSummary.textContent = 'Inference Results: ' + inferenceResultText;
+        inferenceContainer.appendChild(resultSummary);
+})
+.catch(error => console.error('Error fetching data:', error));
+
+    // dynamic ppg chart
+    var dps = [];
+    var dynamicChart = new CanvasJS.Chart("dynamicChartContainer", {
+        exportEnabled: true,
+        title :{
+            text: "Dynamic PPG Chart"
+        },
+        data: [{
+            type: "spline",
+            markerSize: 0,
+            dataPoints: dps
+        }]
+    });
+
+    var xVal = 0;
+    var yVal = 100;
+    var updateInterval = 1000;
+    var dataLength = 50;
+
+    var updateChart = function (count) {
+        count = count || 1;
+        for (var j = 0; j < count; j++) {
+            yVal = yVal + Math.round(5 + Math.random() *(-5-5));
+            dps.push({
+                x: xVal,
+                y: yVal
+            });
+            xVal++;
+        }
+        if (dps.length > dataLength) {
+            dps.shift();
+        }
+        dynamicChart.render();
+    };
+
+    updateChart(dataLength);
+    setInterval(function(){ updateChart() }, updateInterval);
+
+    // Gauge chart
+    var gaugeOptions = {
+        chart: {
+            height: 200,
+            type: 'radialBar',
+        },
+        series: [78],
+        plotOptions: {
+            radialBar: {
+                hollow: {
+                    margin: 0,
+                    size: "70%",
+                },
+                dataLabels: {
+                    showOn: "always",
+                    name: {
+                        show: true,
+                        fontSize: "22px",
+                    },
+                    value: {
+                        show: true,
+                        fontSize: "16px",
+                        formatter: function (val) {
+                            return val + "%";
+                        },
+                    }
+                }
+            }
+        },
+        stroke: {
+            lineCap: "round",
+        },
+        labels: ["Accuracy"],
+        colors: ['#7367F0'],
+    };
+
+    var gaugeChart = new ApexCharts(document.querySelector("#growthGaugeChart"), gaugeOptions);
+    gaugeChart.render();
+}
+</script>
+</head>
+<body>
+<div class="dashboard">
+    <div class="row">
+        <div class="column">
+            <div id="chartContainer"></div>
+            <div id="inferenceResults"></div>
+        </div>
+        <div class="column">
+            <!-- 2번째 열 -->
+            <div>Content for second column</div>
+        </div>
+        <div class="column">
+            <!-- 3번째 열 -->
+            <div>Content for third column</div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="column">
+            <div id="dynamicChartContainer"></div>
+        </div>
+        <div class="column">
+            <div id="growthGaugeChart"></div>
+        </div>
+    </div>
+</div>
+</body>
+</html>
