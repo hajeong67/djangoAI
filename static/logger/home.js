@@ -16,10 +16,10 @@ function connectWebSocket() {
         console.log("Received data-js:", data);
 
         updateChart(data["x_test_twelve_sec"]);
-        dynamicPPGChart(data["ppg_data"]);
-        updateScatter(data["predictions"]);
 
+        updateScatter(data["predictions"]);
         updatePieChart(data["acc_predictions"]);
+
     };
     webSocket.onclose = function (e) {
         setTimeout(connectWebSocket, 1000);
@@ -85,7 +85,7 @@ function updateScatter(predictions) {
             },
             axisX: {
                 title: "Index",
-                minimum: 1,
+                minimum: 0,
                 maximum: predictions.length
             },
             axisY: {
@@ -103,7 +103,8 @@ function updateScatter(predictions) {
         });
     } else {
         scatterChart.options.data[0].dataPoints = dataPoints;
-        scatterChart.options.axisX.maximum = predictions.length - 1;
+        scatterChart.options.axisX.minimum = 0;
+        scatterChart.options.axisX.maximum = predictions.length;
         scatterChart.options.axisY = {
             title: "Prediction",
             minimum: 0,
@@ -201,6 +202,7 @@ function updatePieChart(acc_predictions) {
     }
 }
 
+
 function getRandomColor() {
     var letters = '0123456789ABCDEF';
     var color = '#';
@@ -211,44 +213,7 @@ function getRandomColor() {
 }
 
 
-function dynamicPPGChart() {
-    var dps = [];
-    var dynamicChart = new CanvasJS.Chart("dynamicChartContainer", {
-        exportEnabled: true,
-        title :{
-            text: "Dynamic PPG Chart"
-        },
-        data: [{
-            type: "spline",
-            markerSize: 0,
-            dataPoints: dps
-        }]
-    });
-
-    var xVal = 0;
-    var yVal = 100;
-    var updateInterval = 1000;
-    var dataLength = 50;
-
-    var updateChart = function (count) {
-        count = count || 1;
-        for (var j = 0; j < count; j++) {
-            yVal = yVal + Math.round(5 + Math.random() *(-5-5));
-            dps.push({
-                x: xVal,
-                y: yVal
-            });
-            xVal++;
-        }
-        if (dps.length > dataLength) {
-            dps.shift();
-        }
-        dynamicChart.render();
-    };
-
-    setInterval(function() { updateChart() }, updateInterval);
-}
-
+var ppgQueue = [];
 
 
 function init() {
@@ -256,5 +221,3 @@ function init() {
 }
 
 init();
-
-
