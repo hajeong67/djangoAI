@@ -7,6 +7,8 @@ var dynamicChart;
 var datasets = [];
 var dps = [];
 var pieChart;
+var dynamicSVMChart;
+var svmDps = [];
 
 function connectWebSocket() {
     webSocket = new WebSocket("ws://" + window.location.host + "/ws/logger/receive/");
@@ -16,10 +18,10 @@ function connectWebSocket() {
         console.log("Received data-js:", data);
 
         updateChart(data["x_test_twelve_sec"]);
-
+        updateDynamicPPGChart(data["ppg_data"]);
         updateScatter(data["predictions"]);
         updatePieChart(data["acc_predictions"]);
-
+        updateDynamicSVMChart(data["svm_acc_data"]);
     };
     webSocket.onclose = function (e) {
         setTimeout(connectWebSocket, 1000);
@@ -202,7 +204,6 @@ function updatePieChart(acc_predictions) {
     }
 }
 
-
 function getRandomColor() {
     var letters = '0123456789ABCDEF';
     var color = '#';
@@ -212,9 +213,65 @@ function getRandomColor() {
     return color;
 }
 
-
 var ppgQueue = [];
 
+function updateDynamicPPGChart(ppg_data) {
+    ppgQueue = ppgQueue.concat(ppg_data);
+
+    while (ppgQueue.length > 300) {
+        ppgQueue.shift();
+    }
+
+    dps = ppgQueue.map((value, index) => ({ x: index, y: value }));
+
+    if (!dynamicChart) {
+        dynamicChart = new CanvasJS.Chart("dynamicChartContainer", {
+            exportEnabled: true,
+            title :{
+                text: "Dynamic PPG Chart"
+            },
+            data: [{
+                type: "spline",
+                markerSize: 0,
+                dataPoints: dps
+            }]
+        });
+    } else {
+        dynamicChart.options.data[0].dataPoints = dps;
+    }
+
+    dynamicChart.render();
+}
+
+var svmAccQueue = [];
+
+function updateDynamicSVMChart(svm_acc_data) {
+    svmAccQueue = svmAccQueue.concat(svm_acc_data);
+
+    while (svmAccQueue.length > 300) {
+        svmAccQueue.shift();
+    }
+
+    svmDps = svmAccQueue.map((value, index) => ({ x: index, y: value }));
+
+    if (!dynamicSVMChart) {
+        dynamicSVMChart = new CanvasJS.Chart("dynamicSVMChartContainer", {
+            exportEnabled: true,
+            title: {
+                text: "Dynamic IMU Chart"
+            },
+            data: [{
+                type: "spline",
+                markerSize: 0,
+                dataPoints: svmDps
+            }]
+        });
+    } else {
+        dynamicSVMChart.options.data[0].dataPoints = svmDps;
+    }
+
+    dynamicSVMChart.render();
+}
 
 function init() {
     connectWebSocket();
