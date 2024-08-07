@@ -53,7 +53,7 @@ print(f"DEBUG: Shape of y_test_twelve_sec: {np.array(y_test_twelve_sec).shape}")
 
 # 예측 수행
 predictor = twelveSecPlot.PeakPredictor(model_path, x_test_twelve_sec)
-y_test_twelve_sec = predictor.plot_peaks()
+y_test_twelve_sec = predictor.ppg_prediction()
 
 # 예측 결과 출력
 print(f"DEBUG: Predicted y_test_twelve_sec: {y_test_twelve_sec}")

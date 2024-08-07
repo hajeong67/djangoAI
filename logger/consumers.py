@@ -90,7 +90,7 @@ class PpgModelPredictor:
             logger.debug(f"Shape of y_test_twelve_sec: {np.array(y_test_twelve_sec).shape}")
 
             predictor = PeakPredictor(self.model_path, x_test_twelve_sec)
-            y_test_twelve_sec = predictor.plot_peaks()
+            y_test_twelve_sec = predictor.ppg_prediction()
 
             if not y_test_twelve_sec:
                 logger.error('Prediction resulted in empty data.')
