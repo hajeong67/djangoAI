@@ -115,8 +115,8 @@ function updateScatter(predictions) {
             valueFormatString: "#0.00"
         };
     }
-
     scatterChart.render();
+    document.getElementById("inferenceResults").innerText = "추론 결과: Inference Result";
 }
 
 function updatePieChart(acc_predictions) {
