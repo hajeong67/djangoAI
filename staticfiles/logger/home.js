@@ -120,38 +120,43 @@ function updateScatter(predictions) {
 }
 
 function updatePieChart(acc_predictions) {
-    // 로그 추가 - 업데이트할 파이 차트 데이터 확인
     console.log("Updating pie chart with acc_predictions:", acc_predictions);
 
-    // acc_predictions 배열의 값들을 카운트합니다.
     const counts = {0: 0, 1: 0, 2: 0, 3: 0};
     acc_predictions.forEach(prediction => {
         counts[prediction] = (counts[prediction] || 0) + 1;
     });
 
-    // 파이 차트에 사용할 데이터 포인트를 생성
+    const total = acc_predictions.length;
+
     const dataPoints = Object.keys(counts).map(key => {
         let label;
+        let color;
         switch (key) {
             case '0':
                 label = 'walk';
+                color = 'blue';
                 break;
             case '1':
                 label = 'run';
+                color = 'red';
                 break;
             case '2':
                 label = 'danger';
+                color = 'green';
                 break;
             case '3':
-                label = 'desk work';
+                label = 'desk-work';
+                color = 'orange';
                 break;
             default:
                 label = `Class ${key}`;
+                color = 'grey';
         }
-        return { y: counts[key], label: label };
+        const percentage = ((counts[key] / total) * 100).toFixed(2);
+        return { y: counts[key], label: `${label} ${percentage}%`, color: color };
     });
 
-    // 로그 추가 - 생성된 데이터 포인트 확인
     console.log("Generated data points for pie chart:", dataPoints);
 
     if (!pieChart) {
@@ -161,23 +166,21 @@ function updatePieChart(acc_predictions) {
                 text: "ACC Predictions Distribution"
             },
             data: [{
-                type: "pie",
+                type: "doughnut",
                 startAngle: 240,
-                yValueFormatString: "##0\"\"",
-                indexLabel: "{label} {y}",
+                yValueFormatString: "",
+                indexLabel: "{label}",
                 dataPoints: dataPoints
             }]
         });
     } else {
         pieChart.options.data[0].dataPoints = dataPoints;
     }
-
     pieChart.render();
 
-    // 카운트된 라벨을 텍스트로 표시
+    // 라벨 텍스트
     const labelCountsContainer = document.getElementById("labelCounts");
-    labelCountsContainer.innerHTML = ""; // 기존 내용을 초기화
-
+    labelCountsContainer.innerHTML = "";
     for (const [key, count] of Object.entries(counts)) {
         if (count > 0) {
             let label;
@@ -192,16 +195,32 @@ function updatePieChart(acc_predictions) {
                     label = 'danger';
                     break;
                 case '3':
-                    label = 'desk work';
+                    label = 'desk-work';
                     break;
                 default:
                     label = `Class ${key}`;
             }
             const labelCountElement = document.createElement("p");
-            labelCountElement.textContent = label;
+            const percentage = ((count / total) * 100).toFixed(2);
+            labelCountElement.textContent = `${label} ${percentage}%`;
             labelCountsContainer.appendChild(labelCountElement);
         }
     }
+
+    // 레전드 설정
+    const legendContainer = document.getElementById("legendContainer");
+    legendContainer.innerHTML = "";
+
+    dataPoints.forEach(point => {
+        const legendItem = document.createElement("div");
+        legendItem.className = "legend-item";
+        const colorBox = document.createElement("span");
+        colorBox.style.backgroundColor = point.color;
+        const labelText = document.createTextNode(point.label.split(' ')[0]);
+        legendItem.appendChild(colorBox);
+        legendItem.appendChild(labelText);
+        legendContainer.appendChild(legendItem);
+    });
 }
 
 function getRandomColor() {

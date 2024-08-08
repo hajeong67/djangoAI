@@ -31,6 +31,17 @@
         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
         box-sizing: border-box;
     }
+    .legend-item {
+        display: flex;
+        align-items: center;
+        margin-right: 20px;
+    }
+    .legend-item span {
+        width: 15px;
+        height: 15px;
+        display: inline-block;
+        margin-right: 5px;
+    }
     #chartContainer, #scatterChartContainer, #pieChartContainer {
         height: 350px;
         width: 100%;
@@ -43,6 +54,18 @@
         margin-top: 20px;
         font-size: 16px;
         color: #333;
+    }
+    #legendContainer {
+        display: flex;
+        justify-content: center;
+        margin-top: 20px;
+    }
+    #labelCounts p {
+        font-size: 18px;
+        font-weight: bold;
+    }
+    #labelCounts {
+    text-align: center;
     }
 </style>
 <script src="https://cdn.canvasjs.com/canvasjs.min.js"></script>
@@ -61,6 +84,7 @@
         </div>
         <div class="column">
             <div id="pieChartContainer"></div>
+            <div id="legendContainer"></div>
             <div id="labelCounts"></div>
         </div>
     </div>
