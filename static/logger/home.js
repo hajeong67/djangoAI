@@ -69,12 +69,11 @@ function updateChart(x_test_twelve_sec) {
 }
 
 function updateScatter(predictions) {
-    // 로그 추가 - 업데이트할 산점도 데이터 확인
     console.log("Updating scatter chart with predictions:", predictions);
     dataPoints = predictions.map((y, x) => ({
         x: x,
         y: y,
-        color: y <= 0.75 ? "blue" : "red" // 색상 조건 설정
+        color: y <= 0.75 ? "blue" : "red"
     }));
 
 
@@ -139,15 +138,15 @@ function updatePieChart(acc_predictions) {
                 break;
             case '1':
                 label = 'run';
-                color = 'red';
+                color = 'orange';
                 break;
             case '2':
                 label = 'danger';
-                color = 'green';
+                color = 'red';
                 break;
             case '3':
                 label = 'desk-work';
-                color = 'orange';
+                color = 'green';
                 break;
             default:
                 label = `Class ${key}`;
