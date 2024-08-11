@@ -2,6 +2,7 @@
 <html>
 <head>
 {% load static %}
+    <meta charset="UTF-8">
 <style>
     body {
         display: flex;
@@ -69,6 +70,18 @@
     #labelCounts {
     text-align: center;
     }
+
+    table {
+                text-align: center;
+                border-collapse: collapse;
+                width: 100%;
+            }
+
+    th, td {
+                text-align: center;
+                padding: 1px;
+                border-bottom: 1px solid black;
+            }
 </style>
 <script src="https://cdn.canvasjs.com/canvasjs.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
@@ -97,6 +110,9 @@
         <div class="column">
             <div id="dynamicSVMChartContainer"></div>
         </div>
+    </div>
+    <div class="row">
+        <button onclick="exportToCSV()">Export</button>
     </div>
 </div>
 </body>

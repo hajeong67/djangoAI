@@ -9,6 +9,7 @@ var dps = [];
 var pieChart;
 var dynamicSVMChart;
 var svmDps = [];
+var dataStorage = [];
 
 function connectWebSocket() {
     webSocket = new WebSocket("ws://" + window.location.host + "/ws/logger/receive/");
@@ -22,6 +23,13 @@ function connectWebSocket() {
         updateScatter(data["predictions"]);
         updatePieChart(data["acc_predictions"]);
         updateDynamicSVMChart(data["svm_acc_data"]);
+
+        //csv 데이터 저장
+        dataStorage.push({
+            time: data["time"],
+            ppgPrediction: JSON.stringify(data["predictions"]),
+            accPrediction: JSON.stringify(data["acc_predictions"])
+        });
     };
     webSocket.onclose = function (e) {
         setTimeout(connectWebSocket, 1000);
@@ -300,6 +308,60 @@ function updateDynamicSVMChart(svm_acc_data) {
     }
 
     dynamicSVMChart.render();
+}
+
+function downloadCSV(csv, filename) {
+    try {
+        var csvFile;
+        var downloadLink;
+
+        // Blob 객체 생성
+        csvFile = new Blob([csv], { type: "text/csv" });
+
+        // 다운로드 링크 생성
+        downloadLink = document.createElement("a");
+        downloadLink.download = filename;
+        downloadLink.href = window.URL.createObjectURL(csvFile);
+
+        // 링크 숨기고 다운로드 실행
+        downloadLink.style.display = "none";
+        document.body.appendChild(downloadLink);
+        downloadLink.click();
+        document.body.removeChild(downloadLink);
+
+        // 성공 메시지 로그
+        console.log(`CSV 파일이 성공적으로 다운로드되었습니다: ${filename}`);
+    } catch (error) {
+        // 오류 메시지 로그
+        console.error("CSV 파일 다운로드 중 오류가 발생했습니다:", error);
+    }
+}
+
+function exportToCSV() {
+    try {
+        if (dataStorage.length === 0) {
+            console.warn("저장된 데이터가 없습니다. CSV 파일을 생성할 수 없습니다.");
+            return;
+        }
+
+        var csv = ["time,ppg prediction,acc prediction"];
+
+        dataStorage.forEach(function (row) {
+            csv.push([
+                row.time,
+                '"' + row.ppgPrediction.replace(/"/g, '""') + '"',
+                '"' + row.accPrediction.replace(/"/g, '""') + '"'
+            ].join(","));
+        });
+
+        var filename = 'log-' + Date.now() + '.csv';
+
+        console.log("CSV 파일을 생성 중입니다...");
+        downloadCSV(csv.join("\n"), filename);
+    } catch (error) {
+        // 오류 메시지 로그
+        console.error("CSV 파일 생성 중 오류가 발생했습니다:", error);
+    }
 }
 
 function init() {
