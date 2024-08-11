@@ -180,30 +180,41 @@ function updatePieChart(acc_predictions) {
     // 라벨 텍스트
     const labelCountsContainer = document.getElementById("labelCounts");
     labelCountsContainer.innerHTML = "";
+
+    // 최대 count와 그에 해당하는 key 찾기
+    let maxCount = 0;
+    let maxKey = null;
+
     for (const [key, count] of Object.entries(counts)) {
-        if (count > 0) {
-            let label;
-            switch (key) {
-                case '0':
-                    label = 'walk';
-                    break;
-                case '1':
-                    label = 'run';
-                    break;
-                case '2':
-                    label = 'danger';
-                    break;
-                case '3':
-                    label = 'desk-work';
-                    break;
-                default:
-                    label = `Class ${key}`;
-            }
-            const labelCountElement = document.createElement("p");
-            const percentage = ((count / total) * 100).toFixed(2);
-            labelCountElement.textContent = `${label} ${percentage}%`;
-            labelCountsContainer.appendChild(labelCountElement);
+        if (count >= maxCount) { // 동일한 maxCount일 경우에도 maxKey를 업데이트
+            maxCount = count;
+            maxKey = key;
         }
+    }
+
+    // 최대 count가 0 이상인 경우 라벨 출력
+    if (maxCount > 0 && maxKey !== null) {
+        let label;
+        switch (maxKey) {
+            case '0':
+                label = 'walk';
+                break;
+            case '1':
+                label = 'run';
+                break;
+            case '2':
+                label = 'danger';
+                break;
+            case '3':
+                label = 'desk-work';
+                break;
+            default:
+                label = `Class ${maxKey}`;
+        }
+        const labelCountElement = document.createElement("p");
+        const percentage = ((maxCount / total) * 100).toFixed(2);
+        labelCountElement.textContent = `${label} ${percentage}%`;
+        labelCountsContainer.appendChild(labelCountElement);
     }
 
     // 레전드 설정
