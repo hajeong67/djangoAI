@@ -18,11 +18,38 @@ function connectWebSocket() {
         // 수신된 데이터 확인
         console.log("Received data-js:", data);
 
+        // SVM 데이터 순차적으로 처리
+        let svmAccData = data["svm_acc_data"];
+        let svmIndex = 0;
+
+        function processNextSVMData() {
+            if (svmIndex < svmAccData.length) {
+                updateDynamicSVMChart([svmAccData[svmIndex]]);
+                svmIndex++;
+                setTimeout(processNextSVMData, 100); // 100ms 간격으로 데이터 추가
+            }
+        }
+
+        processNextSVMData(); // SVM 데이터 처리 시작
+
+        // PPG 데이터 순차적으로 처리
+        let ppgData = data["ppg_data"];
+        let ppgIndex = 0;
+
+        function processNextPPGData() {
+            if (ppgIndex < ppgData.length) {
+                updateDynamicPPGChart([ppgData[ppgIndex]]);
+                ppgIndex++;
+                setTimeout(processNextPPGData, 100); // 100ms 간격으로 데이터 추가
+            }
+        }
+
+        processNextPPGData(); // PPG 데이터 처리 시작
+
         updateChart(data["x_test_twelve_sec"]);
         updateDynamicPPGChart(data["ppg_data"]);
         updateScatter(data["predictions"]);
         updatePieChart(data["acc_predictions"]);
-        updateDynamicSVMChart(data["svm_acc_data"]);
 
         //csv 데이터 저장
         dataStorage.push({
@@ -255,7 +282,7 @@ var ppgQueue = [];
 function updateDynamicPPGChart(ppg_data) {
     ppgQueue = ppgQueue.concat(ppg_data);
 
-    while (ppgQueue.length > 300) {
+    while (ppgQueue.length > 50) {
         ppgQueue.shift();
     }
 
@@ -285,7 +312,8 @@ var svmAccQueue = [];
 function updateDynamicSVMChart(svm_acc_data) {
     svmAccQueue = svmAccQueue.concat(svm_acc_data);
 
-    while (svmAccQueue.length > 300) {
+    // 보여질 데이터의 수를 50개로 제한
+    while (svmAccQueue.length > 50) {
         svmAccQueue.shift();
     }
 
