@@ -2,6 +2,7 @@
 <html>
 <head>
 {% load static %}
+    <meta charset="UTF-8">
 <style>
     body {
         display: flex;
@@ -31,6 +32,17 @@
         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
         box-sizing: border-box;
     }
+    .legend-item {
+        display: flex;
+        align-items: center;
+        margin-right: 20px;
+    }
+    .legend-item span {
+        width: 15px;
+        height: 15px;
+        display: inline-block;
+        margin-right: 5px;
+    }
     #chartContainer, #scatterChartContainer, #pieChartContainer {
         height: 350px;
         width: 100%;
@@ -41,9 +53,35 @@
     }
     #inferenceResults {
         margin-top: 20px;
-        font-size: 16px;
+        font-size: 18px;
+        font-weight: bold;
         color: #333;
+        text-align: center;
     }
+    #legendContainer {
+        display: flex;
+        justify-content: center;
+        margin-top: 20px;
+    }
+    #labelCounts p {
+        font-size: 18px;
+        font-weight: bold;
+    }
+    #labelCounts {
+    text-align: center;
+    }
+
+    table {
+                text-align: center;
+                border-collapse: collapse;
+                width: 100%;
+            }
+
+    th, td {
+                text-align: center;
+                padding: 1px;
+                border-bottom: 1px solid black;
+            }
 </style>
 <script src="https://cdn.canvasjs.com/canvasjs.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
@@ -54,13 +92,14 @@
     <div class="row">
         <div class="column">
             <div id="chartContainer"></div>
-            <div id="inferenceResults"></div>
         </div>
         <div class="column">
             <div id="scatterChartContainer"></div>
+            <div id="inferenceResults"></div>
         </div>
         <div class="column">
             <div id="pieChartContainer"></div>
+            <div id="legendContainer"></div>
             <div id="labelCounts"></div>
         </div>
     </div>
@@ -72,7 +111,9 @@
             <div id="dynamicSVMChartContainer"></div>
         </div>
     </div>
+    <div class="row">
+        <button onclick="exportToCSV()">Export</button>
+    </div>
 </div>
 </body>
 </html>
-

@@ -9,6 +9,7 @@ var dps = [];
 var pieChart;
 var dynamicSVMChart;
 var svmDps = [];
+var dataStorage = [];
 
 function connectWebSocket() {
     webSocket = new WebSocket("ws://" + window.location.host + "/ws/logger/receive/");
@@ -17,11 +18,45 @@ function connectWebSocket() {
         // 수신된 데이터 확인
         console.log("Received data-js:", data);
 
+        // SVM 데이터 순차적으로 처리
+        let svmAccData = data["svm_acc_data"];
+        let svmIndex = 0;
+
+        function processNextSVMData() {
+            if (svmIndex < svmAccData.length) {
+                updateDynamicSVMChart([svmAccData[svmIndex]]);
+                svmIndex++;
+                setTimeout(processNextSVMData, 300);
+            }
+        }
+
+        processNextSVMData(); // SVM 데이터 처리 시작
+
+        // PPG 데이터 순차적으로 처리
+        let ppgData = data["ppg_data"];
+        let ppgIndex = 0;
+
+        function processNextPPGData() {
+            if (ppgIndex < ppgData.length) {
+                updateDynamicPPGChart([ppgData[ppgIndex]]);
+                ppgIndex++;
+                setTimeout(processNextPPGData, 250);
+            }
+        }
+
+        processNextPPGData(); // PPG 데이터 처리 시작
+
         updateChart(data["x_test_twelve_sec"]);
         updateDynamicPPGChart(data["ppg_data"]);
         updateScatter(data["predictions"]);
         updatePieChart(data["acc_predictions"]);
-        updateDynamicSVMChart(data["svm_acc_data"]);
+
+        //csv 데이터 저장
+        dataStorage.push({
+            time: data["time"],
+            ppgPrediction: JSON.stringify(data["predictions"]),
+            accPrediction: JSON.stringify(data["acc_predictions"])
+        });
     };
     webSocket.onclose = function (e) {
         setTimeout(connectWebSocket, 1000);
@@ -69,12 +104,11 @@ function updateChart(x_test_twelve_sec) {
 }
 
 function updateScatter(predictions) {
-    // 로그 추가 - 업데이트할 산점도 데이터 확인
     console.log("Updating scatter chart with predictions:", predictions);
     dataPoints = predictions.map((y, x) => ({
         x: x,
         y: y,
-        color: y <= 0.75 ? "blue" : "red" // 색상 조건 설정
+        color: y <= 0.75 ? "blue" : "red"
     }));
 
 
@@ -115,24 +149,88 @@ function updateScatter(predictions) {
             valueFormatString: "#0.00"
         };
     }
-
     scatterChart.render();
+    document.getElementById("inferenceResults").innerText = "추론 결과: Inference Result";
 }
 
 function updatePieChart(acc_predictions) {
-    // 로그 추가 - 업데이트할 파이 차트 데이터 확인
     console.log("Updating pie chart with acc_predictions:", acc_predictions);
 
-    // acc_predictions 배열의 값들을 카운트합니다.
     const counts = {0: 0, 1: 0, 2: 0, 3: 0};
     acc_predictions.forEach(prediction => {
         counts[prediction] = (counts[prediction] || 0) + 1;
     });
 
-    // 파이 차트에 사용할 데이터 포인트를 생성
+    const total = acc_predictions.length;
+
     const dataPoints = Object.keys(counts).map(key => {
         let label;
+        let color;
         switch (key) {
+            case '0':
+                label = 'walk';
+                color = 'blue';
+                break;
+            case '1':
+                label = 'run';
+                color = 'orange';
+                break;
+            case '2':
+                label = 'danger';
+                color = 'red';
+                break;
+            case '3':
+                label = 'desk-work';
+                color = 'green';
+                break;
+            default:
+                label = `Class ${key}`;
+                color = 'grey';
+        }
+        const percentage = ((counts[key] / total) * 100).toFixed(2);
+        return { y: counts[key], label: `${label} ${percentage}%`, color: color };
+    });
+
+    console.log("Generated data points for pie chart:", dataPoints);
+
+    if (!pieChart) {
+        pieChart = new CanvasJS.Chart("pieChartContainer", {
+            animationEnabled: true,
+            title: {
+                text: "ACC Predictions Distribution"
+            },
+            data: [{
+                type: "doughnut",
+                startAngle: 240,
+                yValueFormatString: "",
+                indexLabel: "{label}",
+                dataPoints: dataPoints
+            }]
+        });
+    } else {
+        pieChart.options.data[0].dataPoints = dataPoints;
+    }
+    pieChart.render();
+
+    // 라벨 텍스트
+    const labelCountsContainer = document.getElementById("labelCounts");
+    labelCountsContainer.innerHTML = "";
+
+    // 최대 count와 그에 해당하는 key 찾기
+    let maxCount = 0;
+    let maxKey = null;
+
+    for (const [key, count] of Object.entries(counts)) {
+        if (count >= maxCount) { // 동일한 maxCount일 경우에도 maxKey를 업데이트
+            maxCount = count;
+            maxKey = key;
+        }
+    }
+
+    // 최대 count가 0 이상인 경우 라벨 출력
+    if (maxCount > 0 && maxKey !== null) {
+        let label;
+        switch (maxKey) {
             case '0':
                 label = 'walk';
                 break;
@@ -143,65 +241,31 @@ function updatePieChart(acc_predictions) {
                 label = 'danger';
                 break;
             case '3':
-                label = 'desk work';
+                label = 'desk-work';
                 break;
             default:
-                label = `Class ${key}`;
+                label = `Class ${maxKey}`;
         }
-        return { y: counts[key], label: label };
+        const labelCountElement = document.createElement("p");
+        const percentage = ((maxCount / total) * 100).toFixed(2);
+        labelCountElement.textContent = `${label} ${percentage}%`;
+        labelCountsContainer.appendChild(labelCountElement);
+    }
+
+    // 레전드 설정
+    const legendContainer = document.getElementById("legendContainer");
+    legendContainer.innerHTML = "";
+
+    dataPoints.forEach(point => {
+        const legendItem = document.createElement("div");
+        legendItem.className = "legend-item";
+        const colorBox = document.createElement("span");
+        colorBox.style.backgroundColor = point.color;
+        const labelText = document.createTextNode(point.label.split(' ')[0]);
+        legendItem.appendChild(colorBox);
+        legendItem.appendChild(labelText);
+        legendContainer.appendChild(legendItem);
     });
-
-    // 로그 추가 - 생성된 데이터 포인트 확인
-    console.log("Generated data points for pie chart:", dataPoints);
-
-    if (!pieChart) {
-        pieChart = new CanvasJS.Chart("pieChartContainer", {
-            animationEnabled: true,
-            title: {
-                text: "ACC Predictions Distribution"
-            },
-            data: [{
-                type: "pie",
-                startAngle: 240,
-                yValueFormatString: "##0\"\"",
-                indexLabel: "{label} {y}",
-                dataPoints: dataPoints
-            }]
-        });
-    } else {
-        pieChart.options.data[0].dataPoints = dataPoints;
-    }
-
-    pieChart.render();
-
-    // 카운트된 라벨을 텍스트로 표시
-    const labelCountsContainer = document.getElementById("labelCounts");
-    labelCountsContainer.innerHTML = ""; // 기존 내용을 초기화
-
-    for (const [key, count] of Object.entries(counts)) {
-        if (count > 0) {
-            let label;
-            switch (key) {
-                case '0':
-                    label = 'walk';
-                    break;
-                case '1':
-                    label = 'run';
-                    break;
-                case '2':
-                    label = 'danger';
-                    break;
-                case '3':
-                    label = 'desk work';
-                    break;
-                default:
-                    label = `Class ${key}`;
-            }
-            const labelCountElement = document.createElement("p");
-            labelCountElement.textContent = label;
-            labelCountsContainer.appendChild(labelCountElement);
-        }
-    }
 }
 
 function getRandomColor() {
@@ -218,7 +282,7 @@ var ppgQueue = [];
 function updateDynamicPPGChart(ppg_data) {
     ppgQueue = ppgQueue.concat(ppg_data);
 
-    while (ppgQueue.length > 300) {
+    while (ppgQueue.length > 50) {
         ppgQueue.shift();
     }
 
@@ -248,7 +312,8 @@ var svmAccQueue = [];
 function updateDynamicSVMChart(svm_acc_data) {
     svmAccQueue = svmAccQueue.concat(svm_acc_data);
 
-    while (svmAccQueue.length > 300) {
+    // 보여질 데이터의 수를 50개로 제한
+    while (svmAccQueue.length > 50) {
         svmAccQueue.shift();
     }
 
@@ -271,6 +336,60 @@ function updateDynamicSVMChart(svm_acc_data) {
     }
 
     dynamicSVMChart.render();
+}
+
+function downloadCSV(csv, filename) {
+    try {
+        var csvFile;
+        var downloadLink;
+
+        // Blob 객체 생성
+        csvFile = new Blob([csv], { type: "text/csv" });
+
+        // 다운로드 링크 생성
+        downloadLink = document.createElement("a");
+        downloadLink.download = filename;
+        downloadLink.href = window.URL.createObjectURL(csvFile);
+
+        // 링크 숨기고 다운로드 실행
+        downloadLink.style.display = "none";
+        document.body.appendChild(downloadLink);
+        downloadLink.click();
+        document.body.removeChild(downloadLink);
+
+        // 성공 메시지 로그
+        console.log(`CSV 파일이 성공적으로 다운로드되었습니다: ${filename}`);
+    } catch (error) {
+        // 오류 메시지 로그
+        console.error("CSV 파일 다운로드 중 오류가 발생했습니다:", error);
+    }
+}
+
+function exportToCSV() {
+    try {
+        if (dataStorage.length === 0) {
+            console.warn("저장된 데이터가 없습니다. CSV 파일을 생성할 수 없습니다.");
+            return;
+        }
+
+        var csv = ["time,ppg prediction,acc prediction"];
+
+        dataStorage.forEach(function (row) {
+            csv.push([
+                row.time,
+                '"' + row.ppgPrediction.replace(/"/g, '""') + '"',
+                '"' + row.accPrediction.replace(/"/g, '""') + '"'
+            ].join(","));
+        });
+
+        var filename = 'log-' + Date.now() + '.csv';
+
+        console.log("CSV 파일을 생성 중입니다...");
+        downloadCSV(csv.join("\n"), filename);
+    } catch (error) {
+        // 오류 메시지 로그
+        console.error("CSV 파일 생성 중 오류가 발생했습니다:", error);
+    }
 }
 
 function init() {
