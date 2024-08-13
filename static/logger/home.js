@@ -26,7 +26,7 @@ function connectWebSocket() {
             if (svmIndex < svmAccData.length) {
                 updateDynamicSVMChart([svmAccData[svmIndex]]);
                 svmIndex++;
-                setTimeout(processNextSVMData, 100); // 100ms 간격으로 데이터 추가
+                setTimeout(processNextSVMData, 300);
             }
         }
 
@@ -40,7 +40,7 @@ function connectWebSocket() {
             if (ppgIndex < ppgData.length) {
                 updateDynamicPPGChart([ppgData[ppgIndex]]);
                 ppgIndex++;
-                setTimeout(processNextPPGData, 100); // 100ms 간격으로 데이터 추가
+                setTimeout(processNextPPGData, 250);
             }
         }
 
