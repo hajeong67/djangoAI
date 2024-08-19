@@ -15,7 +15,6 @@ from .twelveSecPlot import PeakPredictor
 
 logger = logging.getLogger('logger')
 
-
 class PpgModelPredictor:
     def __init__(self, model_path, gmm_n_path, gmm_p_path, list_pickle_path, chunk_size, overlap):
         self.model_path = model_path
@@ -62,7 +61,7 @@ class PpgModelPredictor:
                 logger.error('ppg_data_list is empty or invalid')
                 return None, None, 'ppg_data_list is empty or invalid'
 
-            test_data_list = [[1] + ppg_data_list]
+            test_data_list = [ppg_data_list]
 
             test_filtered = preprocessing(data=test_data_list, chunk_size=self.chunk_size, overlap=self.overlap)
             logger.debug(f"DEBUG: test_filtered = {test_filtered}")
@@ -90,7 +89,7 @@ class PpgModelPredictor:
             logger.debug(f"Shape of y_test_twelve_sec: {np.array(y_test_twelve_sec).shape}")
 
             predictor = PeakPredictor(self.model_path, x_test_twelve_sec)
-            y_test_twelve_sec = predictor.ppg_prediction()
+            y_test_twelve_sec, state = predictor.predict_peaks()
 
             if not y_test_twelve_sec:
                 logger.error('Prediction resulted in empty data.')
@@ -177,10 +176,10 @@ class SendGroupConsumer(AsyncWebsocketConsumer):
             return
 
         base_dir = os.path.dirname(os.path.abspath(__file__))
-        model_path = os.path.join(base_dir, "best_model.h5")
-        gmm_n_path = os.path.join(base_dir, 'gmm_n_v3.pkl')
-        gmm_p_path = os.path.join(base_dir, 'gmm_p_v3.pkl')
-        list_pickle_path = os.path.join(base_dir, 'list_v3.pickle')
+        model_path = os.path.join(base_dir, "best_model_v6.h5")
+        gmm_n_path = os.path.join(base_dir, 'gmm_n_v2.pkl')
+        gmm_p_path = os.path.join(base_dir, 'gmm_p_v2.pkl')
+        list_pickle_path = os.path.join(base_dir, 'list_v2.pickle')
         chunk_size = 300
         overlap = 0
 
@@ -218,17 +217,16 @@ class SendGroupConsumer(AsyncWebsocketConsumer):
             y_test_twelve_sec = [float(pred) for pred in predictions]
 
             # 캐시에 저장
-            cache.set(f'ppg_data_storage_{uuid}', x_test_twelve_sec.tolist(), timeout=3600)
+            cache.set(f'ppg_data_storage_{uuid}', x_test_twelve_sec, timeout=3600)
             cache.set(f'prediction_results_{uuid}', y_test_twelve_sec, timeout=3600)
             logger.debug(f"Stored normalized ppg_data in cache: {cache.get(f'ppg_data_storage_{uuid}')}")
 
             # acc
             cache.set(f'acc_data_storage_{uuid}', acc_data, timeout=3600)
             cache.set(f'prediction_results_acc_{uuid}', predicted_classes_acc.tolist(), timeout=3600)
-            logger.debug(f"Stored acc_data in cache: {cache.get(f'acc_data_storage_{uuid}')}")
+            logger.debug(f"Stored prediction_results_acc in cache: {cache.get(f'prediction_results_acc_{uuid}')}")
 
             svm_acc_data = processed_data.loc['SVMacc'].tolist()
-            logger.debug(f"SVMacc data to be sent: {svm_acc_data}")
 
             await self.send(text_data=json.dumps({
                 'predictions': y_test_twelve_sec,
@@ -238,7 +236,6 @@ class SendGroupConsumer(AsyncWebsocketConsumer):
                 'acc_data': acc_data,
                 'svm_acc_data': svm_acc_data
             }))
-            logger.info(f"Sent row ppg: {ppg_data}")
 
             channel_layer = get_channel_layer()
             await channel_layer.group_send(
@@ -246,8 +243,8 @@ class SendGroupConsumer(AsyncWebsocketConsumer):
                 {
                     'type': 'sensor_data',
                     'data': json.dumps({
-                        'x_test_twelve_sec': x_test_twelve_sec.tolist(),
                         'predictions': y_test_twelve_sec,
+                        'x_test_twelve_sec': x_test_twelve_sec.tolist(),
                         'ppg_data': ppg_data,
                         'acc_predictions': predicted_classes_acc.tolist(),
                         'acc_data': acc_data,
