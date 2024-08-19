@@ -139,6 +139,7 @@ class SendGroupConsumer(AsyncWebsocketConsumer):
     async def receive(self, text_data=None, bytes_data=None):
         logger.info(f"Received data: {text_data}")
         data = json.loads(text_data)
+        time_received = data.get('time')
         uuid = data.get('uuid')
         ppg_data_str = data.get('ppg')
         acc_data_str = data.get('acc')
@@ -220,6 +221,7 @@ class SendGroupConsumer(AsyncWebsocketConsumer):
             svm_acc_data = processed_data.loc['SVMacc'].tolist()
 
             await self.send(text_data=json.dumps({
+                'time': time_received,
                 'predictions': y_test_twelve_sec,
                 'x_test_twelve_sec': x_test_twelve_sec.tolist(),
                 'state': state,
@@ -235,6 +237,7 @@ class SendGroupConsumer(AsyncWebsocketConsumer):
                 {
                     'type': 'sensor_data',
                     'data': json.dumps({
+                        'time': time_received,
                         'predictions': y_test_twelve_sec,
                         'x_test_twelve_sec': x_test_twelve_sec.tolist(),
                         'state': state,
