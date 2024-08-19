@@ -10,6 +10,7 @@ var pieChart;
 var dynamicSVMChart;
 var svmDps = [];
 var dataStorage = [];
+var count = 0; // 예측횟수
 
 function connectWebSocket() {
     webSocket = new WebSocket("ws://" + window.location.host + "/ws/logger/receive/");
@@ -17,6 +18,9 @@ function connectWebSocket() {
         var data = JSON.parse(e.data);
         // 수신된 데이터 확인
         console.log("Received data-js:", data);
+
+        count++;
+        document.getElementById('countDisplay').innerText = "Count: " + count;
 
         // SVM 데이터 순차적으로 처리
         let svmAccData = data["svm_acc_data"];
@@ -56,7 +60,8 @@ function connectWebSocket() {
         dataStorage.push({
             time: data["time"],
             ppgPrediction: JSON.stringify(data["predictions"]),
-            accPrediction: JSON.stringify(data["acc_predictions"])
+            accPrediction: JSON.stringify(data["acc_predictions"]),
+            count: count
         });
     };
     webSocket.onclose = function (e) {
@@ -388,13 +393,14 @@ function exportToCSV() {
             return;
         }
 
-        var csv = ["time,ppg prediction,acc prediction"];
+        var csv = ["time,ppg prediction,acc prediction,count"];  // 헤더에 count 추가
 
         dataStorage.forEach(function (row) {
             csv.push([
-                row.time,
-                '"' + row.ppgPrediction.replace(/"/g, '""') + '"',
-                '"' + row.accPrediction.replace(/"/g, '""') + '"'
+                row.time,  // time 데이터
+                '"' + row.ppgPrediction.replace(/"/g, '""') + '"',  // ppg 예측
+                '"' + row.accPrediction.replace(/"/g, '""') + '"',  // acc 예측
+                row.count  // 예측 횟수 count
             ].join(","));
         });
 
@@ -403,7 +409,6 @@ function exportToCSV() {
         console.log("CSV 파일을 생성 중입니다...");
         downloadCSV(csv.join("\n"), filename);
     } catch (error) {
-        // 오류 메시지 로그
         console.error("CSV 파일 생성 중 오류가 발생했습니다:", error);
     }
 }
