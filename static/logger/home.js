@@ -108,9 +108,8 @@ function updateScatter(predictions) {
     dataPoints = predictions.map((y, x) => ({
         x: x,
         y: y,
-        color: y <= 0.75 ? "blue" : "red"
+        color: y === -1 ? "yellow" : (y <= 0.73 ? "blue" : "red")
     }));
-
 
     if (!scatterChart) {
         scatterChart = new CanvasJS.Chart("scatterChartContainer", {
@@ -127,7 +126,7 @@ function updateScatter(predictions) {
             axisY: {
                 title: "Prediction",
                 valueFormatString: "#0.00",
-                minimum: 0,
+                minimum: -1,
                 maximum: 1,
                 interval: 0.25
             },
@@ -143,7 +142,7 @@ function updateScatter(predictions) {
         scatterChart.options.axisX.maximum = predictions.length;
         scatterChart.options.axisY = {
             title: "Prediction",
-            minimum: 0,
+            minimum: -1,
             maximum: 1,
             interval: 0.25,
             valueFormatString: "#0.00"
