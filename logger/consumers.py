@@ -59,7 +59,7 @@ class PpgModelPredictor:
             ppg_data_list = [float(item) for item in ppg_data]
             if not ppg_data_list:
                 logger.error('ppg_data_list is empty or invalid')
-                return None, None, 'ppg_data_list is empty or invalid'
+                return None, None, None, 'ppg_data_list is empty or invalid'
 
             test_data_list = [ppg_data_list]
 
@@ -69,36 +69,27 @@ class PpgModelPredictor:
 
             if twelve_sec_filtered is None or twelve_sec_x is None or twelve_sec_y is None:
                 logger.error('Testing preprocessing failed, resulting in None data.')
-                return None, None, 'Testing preprocessing failed, resulting in None data.'
-
-            logger.debug(f"Shape of twelve_sec_filtered: {np.array(twelve_sec_filtered).shape}")
-            logger.debug(f"Shape of twelve_sec_x: {np.array(twelve_sec_x).shape}")
-            logger.debug(f"Shape of twelve_sec_y: {np.array(twelve_sec_y).shape}")
+                return None, None, None, 'Testing preprocessing failed, resulting in None data.'
 
             model_for_twelve_sec = GMM_model_twelve_sec(twelve_sec_filtered, self.gmm_p, self.gmm_n,
                                                         self.lab0_f, self.lab1_f, self.m_f, self.n_f)
             x_test_twelve_sec, y_test_twelve_sec = model_for_twelve_sec.GMM_model()
-            logger.debug(f"Shape of x_test_twelve_sec after GMM_model: {np.array(x_test_twelve_sec).shape}")
-            logger.debug(f"Shape of y_test_twelve_sec after GMM_model: {np.array(y_test_twelve_sec).shape}")
 
             if x_test_twelve_sec is None or y_test_twelve_sec is None:
                 logger.error('Modeling failed, resulting in None data.')
-                return None, None, 'Modeling failed, resulting in None data.'
-
-            logger.debug(f"Shape of x_test_twelve_sec: {np.array(x_test_twelve_sec).shape}")
-            logger.debug(f"Shape of y_test_twelve_sec: {np.array(y_test_twelve_sec).shape}")
+                return None, None, None, 'Modeling failed, resulting in None data.'
 
             predictor = PeakPredictor(self.model_path, x_test_twelve_sec)
             y_test_twelve_sec, state = predictor.predict_peaks()
 
             if not y_test_twelve_sec:
                 logger.error('Prediction resulted in empty data.')
-                return x_test_twelve_sec, None, 'Prediction resulted in empty data.'
+                return x_test_twelve_sec, None, state, 'Prediction resulted in empty data.'
 
-            return x_test_twelve_sec, y_test_twelve_sec, None
+            return x_test_twelve_sec, y_test_twelve_sec, state, None
         except Exception as e:
             logger.error(f"Exception: {str(e)}")
-            return None, None, str(e)
+            return None, None, None, str(e)
 
 
 class AccDataProcessor:
@@ -208,7 +199,7 @@ class SendGroupConsumer(AsyncWebsocketConsumer):
         predicted_classes_acc = np.argmax(predictions_acc, axis=1)
 
         predictor = PpgModelPredictor(model_path, gmm_n_path, gmm_p_path, list_pickle_path, chunk_size, overlap)
-        x_test_twelve_sec, predictions, error = predictor.ppg_process_and_predict(ppg_data)
+        x_test_twelve_sec, predictions, state, error = predictor.ppg_process_and_predict(ppg_data)
 
         if error:
             logger.error(f"Prediction error: {error}")
@@ -231,6 +222,7 @@ class SendGroupConsumer(AsyncWebsocketConsumer):
             await self.send(text_data=json.dumps({
                 'predictions': y_test_twelve_sec,
                 'x_test_twelve_sec': x_test_twelve_sec.tolist(),
+                'state': state,
                 'ppg_data': ppg_data,
                 'acc_predictions': predicted_classes_acc.tolist(),
                 'acc_data': acc_data,
@@ -245,6 +237,7 @@ class SendGroupConsumer(AsyncWebsocketConsumer):
                     'data': json.dumps({
                         'predictions': y_test_twelve_sec,
                         'x_test_twelve_sec': x_test_twelve_sec.tolist(),
+                        'state': state,
                         'ppg_data': ppg_data,
                         'acc_predictions': predicted_classes_acc.tolist(),
                         'acc_data': acc_data,
