@@ -50,6 +50,7 @@ function connectWebSocket() {
         updateDynamicPPGChart(data["ppg_data"]);
         updateScatter(data["predictions"]);
         updatePieChart(data["acc_predictions"]);
+        updateInferenceResults(data.state);
 
         //csv 데이터 저장
         dataStorage.push({
@@ -149,8 +150,24 @@ function updateScatter(predictions) {
         };
     }
     scatterChart.render();
-    document.getElementById("inferenceResults").innerText = "추론 결과: Inference Result";
 }
+
+function updateInferenceResults(state) {
+    let inferenceText = "";
+
+    if (state === 1) {
+        inferenceText += "negative";
+    } else if (state === 0) {
+        inferenceText += "positive";
+    } else if (state === -1) {
+        inferenceText += "판단불가";
+    } else {
+        inferenceText += "Unknown state";
+    }
+
+    document.getElementById("inferenceResults").innerText = inferenceText;
+}
+
 
 function updatePieChart(acc_predictions) {
     console.log("Updating pie chart with acc_predictions:", acc_predictions);
