@@ -13,7 +13,7 @@ var dataStorage = [];
 var count = 0; // 예측횟수
 
 function Unix_timestamp(t) {
-    var date = new Date(t); // 밀리초 단위로 직접 사용
+    var date = new Date(t);
     var year = date.getFullYear();
     var month = "0" + (date.getMonth() + 1);
     var day = "0" + date.getDate();
@@ -45,7 +45,7 @@ function connectWebSocket() {
             }
         }
 
-        processNextSVMData(); // SVM 데이터 처리 시작
+        processNextSVMData();
 
         // PPG 데이터 순차적으로 처리
         let ppgData = data["ppg_data"];
@@ -59,7 +59,7 @@ function connectWebSocket() {
             }
         }
 
-        processNextPPGData(); // PPG 데이터 처리 시작
+        processNextPPGData();
 
         updateChart(data["x_test_twelve_sec"]);
         updateDynamicPPGChart(data["ppg_data"]);
@@ -149,7 +149,12 @@ function updateScatter(predictions) {
                 valueFormatString: "#0.00",
                 minimum: -1,
                 maximum: 1,
-                interval: 0.25
+                interval: 0.25,
+                stripLines: [{
+                value: 0.74,
+                color: "red",
+                thickness: 1
+            }]
             },
             data: [{
                 type: "scatter",
@@ -166,7 +171,12 @@ function updateScatter(predictions) {
             minimum: -1,
             maximum: 1,
             interval: 0.25,
-            valueFormatString: "#0.00"
+            valueFormatString: "#0.00",
+            stripLines: [{
+                value: 0.74,
+                color: "red",
+                thickness: 1
+            }]
         };
     }
     scatterChart.render();
@@ -256,7 +266,7 @@ function updatePieChart(acc_predictions) {
     let maxKey = null;
 
     for (const [key, count] of Object.entries(counts)) {
-        if (count >= maxCount) { // 동일한 maxCount일 경우에도 maxKey를 업데이트
+        if (count >= maxCount) {
             maxCount = count;
             maxKey = key;
         }

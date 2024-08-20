@@ -149,7 +149,12 @@ function updateScatter(predictions) {
                 valueFormatString: "#0.00",
                 minimum: -1,
                 maximum: 1,
-                interval: 0.25
+                interval: 0.25,
+                stripLines: [{
+                value: 0.74,
+                color: "red",
+                thickness: 1
+            }]
             },
             data: [{
                 type: "scatter",
@@ -166,7 +171,12 @@ function updateScatter(predictions) {
             minimum: -1,
             maximum: 1,
             interval: 0.25,
-            valueFormatString: "#0.00"
+            valueFormatString: "#0.00",
+            stripLines: [{
+                value: 0.74,
+                color: "red",
+                thickness: 1
+            }]
         };
     }
     scatterChart.render();
@@ -256,7 +266,7 @@ function updatePieChart(acc_predictions) {
     let maxKey = null;
 
     for (const [key, count] of Object.entries(counts)) {
-        if (count >= maxCount) { 
+        if (count >= maxCount) {
             maxCount = count;
             maxKey = key;
         }
