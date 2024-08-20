@@ -12,6 +12,17 @@ var svmDps = [];
 var dataStorage = [];
 var count = 0; // 예측횟수
 
+function Unix_timestamp(t) {
+    var date = new Date(t);
+    var year = date.getFullYear();
+    var month = "0" + (date.getMonth() + 1);
+    var day = "0" + date.getDate();
+    var hour = "0" + date.getHours();
+    var minute = "0" + date.getMinutes();
+    var second = "0" + date.getSeconds();
+    return year + "-" + month.substr(-2) + "-" + day.substr(-2) + " " + hour.substr(-2) + ":" + minute.substr(-2) + ":" + second.substr(-2);
+}
+
 function connectWebSocket() {
     webSocket = new WebSocket("ws://" + window.location.host + "/ws/logger/receive/");
     webSocket.onmessage = function (e) {
@@ -34,7 +45,7 @@ function connectWebSocket() {
             }
         }
 
-        processNextSVMData(); // SVM 데이터 처리 시작
+        processNextSVMData();
 
         // PPG 데이터 순차적으로 처리
         let ppgData = data["ppg_data"];
@@ -48,7 +59,7 @@ function connectWebSocket() {
             }
         }
 
-        processNextPPGData(); // PPG 데이터 처리 시작
+        processNextPPGData();
 
         updateChart(data["x_test_twelve_sec"]);
         updateDynamicPPGChart(data["ppg_data"]);
@@ -56,9 +67,13 @@ function connectWebSocket() {
         updatePieChart(data["acc_predictions"]);
         updateInferenceResults(data.state);
 
+        // 밀리초 타임스탬프를 실제 날짜와 시간으로 변환
+        var timestamp = data["time"];
+        var formattedTime = Unix_timestamp(timestamp);
+
         //csv 데이터 저장
         dataStorage.push({
-            time: data["time"],
+            time: formattedTime,
             ppgPrediction: JSON.stringify(data["predictions"]),
             accPrediction: JSON.stringify(data["acc_predictions"]),
             count: count
@@ -161,9 +176,9 @@ function updateInferenceResults(state) {
     let inferenceText = "";
 
     if (state === 1) {
-        inferenceText += "negative";
+        inferenceText += "negative(위험)";
     } else if (state === 0) {
-        inferenceText += "positive";
+        inferenceText += "positive(정상)";
     } else if (state === -1) {
         inferenceText += "판단불가";
     } else {
@@ -172,7 +187,6 @@ function updateInferenceResults(state) {
 
     document.getElementById("inferenceResults").innerText = inferenceText;
 }
-
 
 function updatePieChart(acc_predictions) {
     console.log("Updating pie chart with acc_predictions:", acc_predictions);
@@ -242,7 +256,7 @@ function updatePieChart(acc_predictions) {
     let maxKey = null;
 
     for (const [key, count] of Object.entries(counts)) {
-        if (count >= maxCount) { // 동일한 maxCount일 경우에도 maxKey를 업데이트
+        if (count >= maxCount) { 
             maxCount = count;
             maxKey = key;
         }
@@ -396,10 +410,64 @@ function exportToCSV() {
         var csv = ["time,ppg prediction,acc prediction,count"];  // 헤더에 count 추가
 
         dataStorage.forEach(function (row) {
+            // ppgPrediction 리스트를 텍스트로 변환
+            let ppgPredictionArray = JSON.parse(row.ppgPrediction);
+            let ppgPredictionText = ppgPredictionArray.map(state => {
+                let inferenceText = "";
+
+                if (state === 1) {
+                    inferenceText = "positive";
+                } else if (state === 0) {
+                    inferenceText = "negative";
+                } else if (state === -1) {
+                    inferenceText = "판단불가";
+                } else {
+                    inferenceText = "Unknown";
+                }
+
+                return inferenceText;
+            })[0];
+
+            // accPrediction에서 가장 높은 비율을 갖는 숫자를 텍스트로 변환
+            let accPredictionArray = JSON.parse(row.accPrediction);
+            const counts = {0: 0, 1: 0, 2: 0, 3: 0};
+
+            accPredictionArray.forEach(prediction => {
+                counts[prediction] = (counts[prediction] || 0) + 1;
+            });
+
+            let maxCount = 0;
+            let maxKey = null;
+
+            for (const [key, count] of Object.entries(counts)) {
+                if (count >= maxCount) {  // 동일한 maxCount일 경우에도 maxKey를 업데이트
+                    maxCount = count;
+                    maxKey = key;
+                }
+            }
+
+            let accPredictionText = '';
+            switch (maxKey) {
+                case '0':
+                    accPredictionText = 'walk';
+                    break;
+                case '1':
+                    accPredictionText = 'run';
+                    break;
+                case '2':
+                    accPredictionText = 'danger';
+                    break;
+                case '3':
+                    accPredictionText = 'desk-work';
+                    break;
+                default:
+                    accPredictionText = 'Unknown';
+            }
+
             csv.push([
                 row.time,  // time 데이터
-                '"' + row.ppgPrediction.replace(/"/g, '""') + '"',  // ppg 예측
-                '"' + row.accPrediction.replace(/"/g, '""') + '"',  // acc 예측
+                '"' + ppgPredictionText.replace(/"/g, '""') + '"',  // ppg 예측 텍스트
+                '"' + accPredictionText.replace(/"/g, '""') + '"',  // acc 예측 텍스트
                 row.count  // 예측 횟수 count
             ].join(","));
         });
