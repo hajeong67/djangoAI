@@ -74,7 +74,7 @@ function connectWebSocket() {
         //csv 데이터 저장
         dataStorage.push({
             time: formattedTime,
-            ppgPrediction: JSON.stringify(data["predictions"]),
+            ppgPrediction: JSON.stringify(data.state),
             accPrediction: JSON.stringify(data["acc_predictions"]),
             count: count
         });
@@ -420,23 +420,7 @@ function exportToCSV() {
         var csv = ["time,ppg prediction,acc prediction,count"];  // 헤더에 count 추가
 
         dataStorage.forEach(function (row) {
-            // ppgPrediction 리스트를 텍스트로 변환
-            let ppgPredictionArray = JSON.parse(row.ppgPrediction);
-            let ppgPredictionText = ppgPredictionArray.map(state => {
-                let inferenceText = "";
-
-                if (state === 1) {
-                    inferenceText = "positive";
-                } else if (state === 0) {
-                    inferenceText = "negative";
-                } else if (state === -1) {
-                    inferenceText = "판단불가";
-                } else {
-                    inferenceText = "Unknown";
-                }
-
-                return inferenceText;
-            })[0];
+            let ppgPredictionValue = row.ppgPrediction;
 
             // accPrediction에서 가장 높은 비율을 갖는 숫자를 텍스트로 변환
             let accPredictionArray = JSON.parse(row.accPrediction);
@@ -476,7 +460,7 @@ function exportToCSV() {
 
             csv.push([
                 row.time,  // time 데이터
-                '"' + ppgPredictionText.replace(/"/g, '""') + '"',  // ppg 예측 텍스트
+                ppgPredictionValue,
                 '"' + accPredictionText.replace(/"/g, '""') + '"',  // acc 예측 텍스트
                 row.count  // 예측 횟수 count
             ].join(","));
