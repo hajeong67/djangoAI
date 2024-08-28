@@ -1,10 +1,13 @@
 import numpy as np
 import heartpy as hp
+import csv
 import warnings
-import logging
+import matplotlib.pyplot as plt
 warnings.filterwarnings(action='ignore')
+import glob
+from sklearn.model_selection import train_test_split
+from sklearn.mixture import GaussianMixture
 
-logger = logging.getLogger('logger')
 window_size_green = 300
 overlap = 30
 
@@ -14,8 +17,6 @@ class preprocessing:
         self.data = data
         self.chunk_size = chunk_size
         self.overlap = overlap
-        # 데이터 구조 확인을 위한 출력
-        # print("data:", data)
 
     def chunk_data_hp(self):
         data_y = [y[0] for y in self.data]
@@ -44,7 +45,6 @@ class preprocessing:
         return x_result, y_result
 
     def dividing_and_extracting(self):
-        print("dividing extracting 진입")
         x, y = self.chunk_data_hp()
         peak_shapes = []
         fake_index = []
@@ -53,9 +53,9 @@ class preprocessing:
         wd, m = hp.process(x, sample_rate=25)
 
         peaks = wd['peaklist']
-        print("Peaks:", peaks)
+        print(peaks)
         fake_peaks = wd['removed_beats']
-        print("Fake Peaks:", fake_peaks)
+        print(fake_peaks)
         fake_index.extend(fake_peaks)
         real_peaks = [item for item in peaks if item not in fake_peaks]
 
@@ -69,59 +69,43 @@ class preprocessing:
         print(np_peak.shape)
         return np_peak, x, y
 
-
 class GMM_model_twelve_sec:
-    def __init__(self, data, gmm_p, gmm_n, lab0, lab1, m, n):
-        self.data = data
-        self.gmm_p = gmm_p
-        self.gmm_n = gmm_n
-        self.lab0 = lab0
-        self.lab1 = lab1
-        self.m = m
-        self.n = n
+    def __init__(self, data, gmm_p, gmm_n, lab0, lab1,m,n):
+        self.data=data
+        self.gmm_p=gmm_p
+        self.gmm_n=gmm_n
+        self.lab0=lab0
+        self.lab1=lab1
+        self.m=m
+        self.n=n
 
     def GMM_model(self):
-        logger.debug("DEBUG: Entered GMM_model method")
 
         if self.gmm_p is None or self.gmm_n is None:
             raise ValueError("GMM models must be provided for test data")
-
         d = np.array(self.data)
-        logger.debug(f"Input data shape: {d.shape}")
-        logger.debug(f"Input data: {d}")
-
+        print(d)
         dy = d[:, 0]
         d = d[:, 1:]
-        logger.debug(f"Shape of d after slicing: {d.shape}")
-        logger.debug(f"Shape of dy: {dy.shape}")
-
         tst = []
 
         lb1 = self.gmm_n.predict(d)
         lb2 = self.gmm_p.predict(d)
-        logger.debug(f"Predictions from gmm_n: {lb1}")
-        logger.debug(f"Predictions from gmm_p: {lb2}")
 
         for i in range(len(lb1)):
             if lb1[i] != self.lab1 and lb2[i] != self.lab0:
-                pass
+                tst.append(-1)
             else:
                 tst.append(d[i])
 
-        logger.debug(f"Filtered data tst shape: {np.array(tst).shape}")
-        logger.debug(f"Filtered data tst: {tst}")
-
         normalized = []
         for value in tst:
-            normalized_num = (value - self.n) / (self.m - self.n)
-            normalized.append(normalized_num)
-
+            if isinstance(value, np.ndarray):
+                normalized_num = (value - self.n) / (self.m - self.n)
+                normalized.append(normalized_num)
+            else:
+                normalized.append(np.array([-1 for _ in range(27)]))
         data = np.array(normalized)
         data_x = data
         data_y = dy
-        logger.debug(f"Normalized data shape: {data_x.shape}")
-        logger.debug(f"Normalized data: {data_x}")
-        logger.debug(f"Data_y shape: {data_y.shape}")
-        logger.debug(f"Data_y: {data_y}")
-
         return data_x, data_y

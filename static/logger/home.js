@@ -10,6 +10,18 @@ var pieChart;
 var dynamicSVMChart;
 var svmDps = [];
 var dataStorage = [];
+var count = 0; // 예측횟수
+
+function Unix_timestamp(t) {
+    var date = new Date(t);
+    var year = date.getFullYear();
+    var month = "0" + (date.getMonth() + 1);
+    var day = "0" + date.getDate();
+    var hour = "0" + date.getHours();
+    var minute = "0" + date.getMinutes();
+    var second = "0" + date.getSeconds();
+    return year + "-" + month.substr(-2) + "-" + day.substr(-2) + " " + hour.substr(-2) + ":" + minute.substr(-2) + ":" + second.substr(-2);
+}
 
 function connectWebSocket() {
     webSocket = new WebSocket("ws://" + window.location.host + "/ws/logger/receive/");
@@ -17,6 +29,9 @@ function connectWebSocket() {
         var data = JSON.parse(e.data);
         // 수신된 데이터 확인
         console.log("Received data-js:", data);
+
+        count++;
+        document.getElementById('countDisplay').innerText = "Count: " + count;
 
         // SVM 데이터 순차적으로 처리
         let svmAccData = data["svm_acc_data"];
@@ -30,7 +45,7 @@ function connectWebSocket() {
             }
         }
 
-        processNextSVMData(); // SVM 데이터 처리 시작
+        processNextSVMData();
 
         // PPG 데이터 순차적으로 처리
         let ppgData = data["ppg_data"];
@@ -44,18 +59,24 @@ function connectWebSocket() {
             }
         }
 
-        processNextPPGData(); // PPG 데이터 처리 시작
+        processNextPPGData();
 
         updateChart(data["x_test_twelve_sec"]);
         updateDynamicPPGChart(data["ppg_data"]);
         updateScatter(data["predictions"]);
         updatePieChart(data["acc_predictions"]);
+        updateInferenceResults(data.state);
+
+        // 밀리초 타임스탬프를 실제 날짜와 시간으로 변환
+        var timestamp = data["time"];
+        var formattedTime = Unix_timestamp(timestamp);
 
         //csv 데이터 저장
         dataStorage.push({
-            time: data["time"],
-            ppgPrediction: JSON.stringify(data["predictions"]),
-            accPrediction: JSON.stringify(data["acc_predictions"])
+            time: formattedTime,
+            ppgPrediction: JSON.stringify(data.state),
+            accPrediction: JSON.stringify(data["acc_predictions"]),
+            count: count
         });
     };
     webSocket.onclose = function (e) {
@@ -108,9 +129,8 @@ function updateScatter(predictions) {
     dataPoints = predictions.map((y, x) => ({
         x: x,
         y: y,
-        color: y <= 0.75 ? "blue" : "red"
+        color: y === -1 ? "yellow" : (y <= 0.73 ? "blue" : "red")
     }));
-
 
     if (!scatterChart) {
         scatterChart = new CanvasJS.Chart("scatterChartContainer", {
@@ -127,9 +147,14 @@ function updateScatter(predictions) {
             axisY: {
                 title: "Prediction",
                 valueFormatString: "#0.00",
-                minimum: 0,
+                minimum: -1,
                 maximum: 1,
-                interval: 0.25
+                interval: 0.25,
+                stripLines: [{
+                value: 0.74,
+                color: "red",
+                thickness: 1
+            }]
             },
             data: [{
                 type: "scatter",
@@ -143,14 +168,34 @@ function updateScatter(predictions) {
         scatterChart.options.axisX.maximum = predictions.length;
         scatterChart.options.axisY = {
             title: "Prediction",
-            minimum: 0,
+            minimum: -1,
             maximum: 1,
             interval: 0.25,
-            valueFormatString: "#0.00"
+            valueFormatString: "#0.00",
+            stripLines: [{
+                value: 0.74,
+                color: "red",
+                thickness: 1
+            }]
         };
     }
     scatterChart.render();
-    document.getElementById("inferenceResults").innerText = "추론 결과: Inference Result";
+}
+
+function updateInferenceResults(state) {
+    let inferenceText = "";
+
+    if (state === 1) {
+        inferenceText += "negative(위험)";
+    } else if (state === 0) {
+        inferenceText += "positive(정상)";
+    } else if (state === -1) {
+        inferenceText += "판단불가";
+    } else {
+        inferenceText += "Unknown state";
+    }
+
+    document.getElementById("inferenceResults").innerText = inferenceText;
 }
 
 function updatePieChart(acc_predictions) {
@@ -221,7 +266,7 @@ function updatePieChart(acc_predictions) {
     let maxKey = null;
 
     for (const [key, count] of Object.entries(counts)) {
-        if (count >= maxCount) { // 동일한 maxCount일 경우에도 maxKey를 업데이트
+        if (count >= maxCount) {
             maxCount = count;
             maxKey = key;
         }
@@ -372,13 +417,52 @@ function exportToCSV() {
             return;
         }
 
-        var csv = ["time,ppg prediction,acc prediction"];
+        var csv = ["time,ppg prediction,acc prediction,count"];  // 헤더에 count 추가
 
         dataStorage.forEach(function (row) {
+            let ppgPredictionValue = row.ppgPrediction;
+
+            // accPrediction에서 가장 높은 비율을 갖는 숫자를 텍스트로 변환
+            let accPredictionArray = JSON.parse(row.accPrediction);
+            const counts = {0: 0, 1: 0, 2: 0, 3: 0};
+
+            accPredictionArray.forEach(prediction => {
+                counts[prediction] = (counts[prediction] || 0) + 1;
+            });
+
+            let maxCount = 0;
+            let maxKey = null;
+
+            for (const [key, count] of Object.entries(counts)) {
+                if (count >= maxCount) {  // 동일한 maxCount일 경우에도 maxKey를 업데이트
+                    maxCount = count;
+                    maxKey = key;
+                }
+            }
+
+            let accPredictionText = '';
+            switch (maxKey) {
+                case '0':
+                    accPredictionText = 'walk';
+                    break;
+                case '1':
+                    accPredictionText = 'run';
+                    break;
+                case '2':
+                    accPredictionText = 'danger';
+                    break;
+                case '3':
+                    accPredictionText = 'desk-work';
+                    break;
+                default:
+                    accPredictionText = 'Unknown';
+            }
+
             csv.push([
-                row.time,
-                '"' + row.ppgPrediction.replace(/"/g, '""') + '"',
-                '"' + row.accPrediction.replace(/"/g, '""') + '"'
+                row.time,  // time 데이터
+                ppgPredictionValue,
+                '"' + accPredictionText.replace(/"/g, '""') + '"',  // acc 예측 텍스트
+                row.count  // 예측 횟수 count
             ].join(","));
         });
 
@@ -387,7 +471,6 @@ function exportToCSV() {
         console.log("CSV 파일을 생성 중입니다...");
         downloadCSV(csv.join("\n"), filename);
     } catch (error) {
-        // 오류 메시지 로그
         console.error("CSV 파일 생성 중 오류가 발생했습니다:", error);
     }
 }
