@@ -187,6 +187,15 @@ function updateInferenceResults(state) {
 
     if (state === 1) {
         inferenceText += "negative(위험)";
+
+        let body = document.body;
+        let blinkInterval = setInterval(() => {
+            body.style.backgroundColor = body.style.backgroundColor === "rgba(255, 0, 0, 0.5)" ? "" : "rgba(255, 0, 0, 0.5)";
+        }, 500);
+        setTimeout(() => {
+            clearInterval(blinkInterval);
+            body.style.backgroundColor = "";
+        }, 12000);
     } else if (state === 0) {
         inferenceText += "positive(정상)";
     } else if (state === -1) {
