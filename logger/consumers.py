@@ -9,6 +9,8 @@ from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.layers import get_channel_layer
 from django.core.cache import cache
 import logging
+import requests
+import json
 
 from .twelveSecFilter import preprocessing, GMM_model_twelve_sec
 from .twelveSecPlot import PeakPredictor
@@ -219,6 +221,29 @@ class SendGroupConsumer(AsyncWebsocketConsumer):
             logger.debug(f"Stored prediction_results_acc in cache: {cache.get(f'prediction_results_acc_{uuid}')}")
 
             svm_acc_data = processed_data.loc['SVMacc'].tolist()
+
+            # sos_trigger 조건
+            Motion_flag = state == 1  # PPG 예측 결과가 1이면 True
+            Phy_flag = 2 in predicted_classes_acc  # ACC 예측 결과에 '2'이 있으면 True
+
+            if Motion_flag or Phy_flag:
+                sos_trigger = {
+                    "Motion_flag": Motion_flag,
+                    "Phy_flag": Phy_flag,
+                    "device_id": uuid,
+                    "time": time_received
+                }
+
+                # HTTP 요청 전송
+                url = "https://eoz3l3xgxkameke.m.pipedream.net"
+                try:
+                    response = requests.post(url, json=sos_trigger)
+                    if response.status_code == 200:
+                        logger.info(f"Successfully sent sos_trigger: {sos_trigger}")
+                    else:
+                        logger.error(f"Failed to send sos_trigger: {response.status_code} - {response.text}")
+                except requests.RequestException as e:
+                    logger.error(f"HTTP request failed: {e}")
 
             await self.send(text_data=json.dumps({
                 'time': time_received,
