@@ -9,6 +9,8 @@ from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.layers import get_channel_layer
 from django.core.cache import cache
 import logging
+import requests
+import json
 
 from .twelveSecFilter import preprocessing, GMM_model_twelve_sec
 from .twelveSecPlot import PeakPredictor
@@ -219,6 +221,39 @@ class SendGroupConsumer(AsyncWebsocketConsumer):
             logger.debug(f"Stored prediction_results_acc in cache: {cache.get(f'prediction_results_acc_{uuid}')}")
 
             svm_acc_data = processed_data.loc['SVMacc'].tolist()
+
+            # sos_trigger 조건
+            Motion_flag = state == 1  # PPG 예측 결과가 1이면 True
+            Phy_flag = 2 in predicted_classes_acc  # ACC 예측 결과에 '2'이 있으면 True
+
+            if Motion_flag or Phy_flag:
+                SOS_TRIGGER = {
+                    "SOS_TRIGGER": {
+                        "DEVICE_ID": "337799badb630b01",
+                        "MOTION_FLAG": Motion_flag,
+                        "PHY_FLAG": Phy_flag,
+                        "TIME": time_received
+                    }
+                }
+
+                # HTTP 요청 전송
+                url = "http://spin.geotwo.com/api/dts/event/danger"
+                headers = {'Content-Type': 'application/json'}
+                try:
+                    response = requests.post(url, json=SOS_TRIGGER, headers=headers)
+                    # 응답 코드가 200
+                    if response.status_code == 200:
+                        logger.info(f"sos_trigger: {SOS_TRIGGER}")
+                        # 응답 본문을 JSON으로 파싱하여 출력
+                        response_data = response.json()
+                        print("Response Data:", response_data)
+                    else:
+                        print(f"Failed to send request. Status code: {response.status_code}")
+                        print("Response Text:", response.text)
+                except requests.RequestException as e:
+                    # HTTP 요청 실패
+                    logger.error(f"HTTP request failed: {e}")
+                    return False
 
             await self.send(text_data=json.dumps({
                 'time': time_received,
