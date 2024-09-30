@@ -227,23 +227,33 @@ class SendGroupConsumer(AsyncWebsocketConsumer):
             Phy_flag = 2 in predicted_classes_acc  # ACC 예측 결과에 '2'이 있으면 True
 
             if Motion_flag or Phy_flag:
-                sos_trigger = {
-                    "Motion_flag": Motion_flag,
-                    "Phy_flag": Phy_flag,
-                    "device_id": uuid,
-                    "time": time_received
+                SOS_TRIGGER = {
+                    "SOS_TRIGGER": {
+                        "DEVICE_ID": "337799badb630b01",
+                        "MOTION_FLAG": Motion_flag,
+                        "PHY_FLAG": Phy_flag,
+                        "TIME": time_received
+                    }
                 }
 
                 # HTTP 요청 전송
-                url = "https://eoz3l3xgxkameke.m.pipedream.net"
+                url = "http://spin.geotwo.com/api/dts/event/danger"
+                headers = {'Content-Type': 'application/json'}
                 try:
-                    response = requests.post(url, json=sos_trigger)
+                    response = requests.post(url, json=SOS_TRIGGER, headers=headers)
+                    # 응답 코드가 200
                     if response.status_code == 200:
-                        logger.info(f"Successfully sent sos_trigger: {sos_trigger}")
+                        logger.info(f"sos_trigger: {SOS_TRIGGER}")
+                        # 응답 본문을 JSON으로 파싱하여 출력
+                        response_data = response.json()
+                        print("Response Data:", response_data)
                     else:
-                        logger.error(f"Failed to send sos_trigger: {response.status_code} - {response.text}")
+                        print(f"Failed to send request. Status code: {response.status_code}")
+                        print("Response Text:", response.text)
                 except requests.RequestException as e:
+                    # HTTP 요청 실패
                     logger.error(f"HTTP request failed: {e}")
+                    return False
 
             await self.send(text_data=json.dumps({
                 'time': time_received,
