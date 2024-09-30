@@ -105,7 +105,10 @@ function updateChart(x_test_twelve_sec) {
     if (!chart) {
         chart = new CanvasJS.Chart("chartContainer", {
             title: {
-                text: "Normalized PPG Data"
+                text: "NORMALIZED PPG DATA",
+                fontFamily: "Arial",
+                fontSize: 25,
+                margin: 30
             },
             axisX: {
                 title: "Sample Index"
@@ -129,7 +132,7 @@ function updateScatter(predictions) {
     dataPoints = predictions.map((y, x) => ({
         x: x,
         y: y,
-        color: y === -1 ? "yellow" : (y <= 0.73 ? "blue" : "red")
+        color: y === -1 ? "#F1D04B" : (y <= 0.73 ? "#4C9BD3" : "#F8626D")
     }));
 
     if (!scatterChart) {
@@ -137,7 +140,10 @@ function updateScatter(predictions) {
             animationEnabled: true,
             zoomEnabled: true,
             title: {
-                text: "Predictions Scatter Plot"
+                text: "PPG PREDICTIONS",
+                fontFamily: "Arial",
+                fontSize: 25,
+                margin: 30
             },
             axisX: {
                 title: "Index",
@@ -168,6 +174,7 @@ function updateScatter(predictions) {
         scatterChart.options.axisX.maximum = predictions.length;
         scatterChart.options.axisY = {
             title: "Prediction",
+            fontFamily: "Arial",
             minimum: -1,
             maximum: 1,
             interval: 0.25,
@@ -186,7 +193,7 @@ function updateInferenceResults(state) {
     let inferenceText = "";
 
     if (state === 1) {
-        inferenceText += "negative(위험)";
+        inferenceText += "negative (위험)";
 
         let body = document.body;
         let blinkInterval = setInterval(() => {
@@ -197,7 +204,7 @@ function updateInferenceResults(state) {
             body.style.backgroundColor = "";
         }, 12000);
     } else if (state === 0) {
-        inferenceText += "positive(정상)";
+        inferenceText += "positive (정상)";
     } else if (state === -1) {
         inferenceText += "판단불가";
     } else {
@@ -223,19 +230,19 @@ function updatePieChart(acc_predictions) {
         switch (key) {
             case '0':
                 label = 'walk';
-                color = 'blue';
+                color = '#4C9BD3'; //blue
                 break;
             case '1':
                 label = 'run';
-                color = 'orange';
+                color = '#EAA468'; //orange
                 break;
             case '2':
                 label = 'danger';
-                color = 'red';
+                color = '#F8626D'; //red
                 break;
             case '3':
                 label = 'desk-work';
-                color = 'green';
+                color = '#47D6BB'; //green
                 break;
             default:
                 label = `Class ${key}`;
@@ -251,7 +258,10 @@ function updatePieChart(acc_predictions) {
         pieChart = new CanvasJS.Chart("pieChartContainer", {
             animationEnabled: true,
             title: {
-                text: "ACC Predictions Distribution"
+                text: "ACC PREDICTIONS",
+                fontFamily: "Arial",
+                fontSize: 25,
+                margin: 30
             },
             data: [{
                 type: "doughnut",
@@ -346,7 +356,10 @@ function updateDynamicPPGChart(ppg_data) {
         dynamicChart = new CanvasJS.Chart("dynamicChartContainer", {
             exportEnabled: true,
             title :{
-                text: "Dynamic PPG Chart"
+                text: "DYNAMIC PPG CHART",
+                fontFamily: "Arial",
+                fontSize: 25,
+                margin: 30
             },
             data: [{
                 type: "spline",
@@ -377,7 +390,10 @@ function updateDynamicSVMChart(svm_acc_data) {
         dynamicSVMChart = new CanvasJS.Chart("dynamicSVMChartContainer", {
             exportEnabled: true,
             title: {
-                text: "Dynamic IMU Chart"
+                text: "DYNAMIC IMU CHART",
+                fontFamily: "Arial",
+                fontSize: 25,
+                margin: 30
             },
             data: [{
                 type: "spline",
